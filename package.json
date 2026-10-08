@@ -16,8 +16,10 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@better-auth/drizzle-adapter": "^1.7.7",
     "@neondatabase/serverless": "^1.2.0",
     "@next/env": "16.4.0",
+    "better-auth": "^1.7.7",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "drizzle-orm": "^0.45.3",
