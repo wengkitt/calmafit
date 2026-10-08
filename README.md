@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CalmaFit
 
-## Getting Started
+A mobile-first calorie, macronutrient, and body weight tracking app.
+Track daily meals, calories and macros, contribute to a shared versioned food bank, and record weight and personal goals.
 
-First, run the development server:
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
+# Fill in the database and authentication settings described below.
+pnpm db:migrate
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [localhost:3000](http://localhost:3000). The home route opens `/dashboard`;
+visitors without a valid session are redirected to `/sign-in` to continue with Google. The dashboard opens your food diary. Food bank, weight history, and settings are available from the mobile bottom navigation or desktop sidebar.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run `pnpm lint` and `pnpm exec tsc --noEmit` to check the project.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database (Drizzle + Neon PostgreSQL)
 
-## Learn More
+The database client uses Drizzle ORM with Neon's HTTP driver. Credentials are
+only needed when querying the database or running commands that connect to it.
 
-To learn more about Next.js, take a look at the following resources:
+1. Copy `.env.example` to `.env.local`.
+2. Set `DATABASE_URL` to the PostgreSQL connection string from your Neon dashboard,
+   including its SSL parameters. Keep `.env.local` out of Git.
+3. Define and export your tables in `lib/db/schema.ts` using `drizzle-orm/pg-core`.
+4. Generate a migration with `pnpm db:generate`, review the SQL in `drizzle/`,
+   then apply it with `pnpm db:migrate`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The Better Auth tables and their initial migration are included. Commit generated
+migration files alongside schema changes. Migration generation works without
+credentials; migration application requires `DATABASE_URL`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Command            | Purpose                                                   |
+| ------------------ | --------------------------------------------------------- |
+| `pnpm db:generate` | Generate SQL migrations from schema changes               |
+| `pnpm db:migrate`  | Apply pending migrations to the configured database       |
+| `pnpm db:push`     | Apply schema changes directly for development prototyping |
+| `pnpm db:studio`   | Open Drizzle Studio to browse the configured database     |
 
-## Deploy on Vercel
+Use the client from Server Components, Server Actions, or Route Handlers:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```ts
+import { sql } from "drizzle-orm";
+import { getDb } from "@/lib/db";
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+const result = await getDb().execute(sql`select 1 as connected`);
+```
+
+The client is marked `server-only` and initialized on first use. Never use a
+`NEXT_PUBLIC_` prefix for database credentials. Drizzle Kit loads `.env*` files
+with `@next/env`, following Next.js environment loading rules.
+
+The HTTP driver suits ordinary queries and batched transactions. Interactive
+transactions requiring a persistent session need Neon's WebSocket driver instead.
+See the [Drizzle Neon guide](https://orm.drizzle.team/docs/get-started/neon-new).
+
+## Authentication (Better Auth)
+
+Google is the only sign-in method, available at `/sign-in`. First-time Google users
+receive an account automatically. Email/password sign-in and registration are disabled,
+and `/sign-up` redirects to `/sign-in`. Successful authentication opens `/dashboard`,
+which validates the session on the server. Sign-out is available in the desktop sidebar
+and in Settings on mobile.
+
+Before using authentication:
+
+1. Set `DATABASE_URL` in `.env.local`.
+2. Generate a secret with `openssl rand -base64 32` and set `BETTER_AUTH_SECRET`.
+3. Set `BETTER_AUTH_URL` to `http://localhost:3000` locally, or your HTTPS origin
+   in production. Use a stable secret for each deployed environment.
+4. Run `pnpm db:migrate` to create the user, session, account, and verification
+   tables. This changes the database configured by `DATABASE_URL`.
+5. For Google, create an OAuth client of type **Web application** in
+   [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+   Configure your consent screen and add test users if the app is in testing mode.
+   Set the authorized JavaScript origin to `http://localhost:3000` and the redirect
+   URI to `http://localhost:3000/api/auth/callback/google`. Add equivalent entries
+   for your production origin. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+6. Restart the development server after changing environment variables.
+
+Google requires both OAuth credentials to be set. Existing user records are preserved.
+
+Server configuration lives in `lib/auth.ts`; `getAuth()` initializes it on first
+use so credentials are not required just to import the route during a build.
+The Next.js handler is mounted at `/api/auth/[...all]`. Client Components can use
+`authClient` from `lib/auth-client.ts` for Google `signIn.social`, `signOut`, and `useSession`.
+
+Protect each page, Route Handler, or Server Action that accesses private data by
+validating its session on the server. Do not rely only on a layout or cookie presence:
+
+```ts
+import { requireSession } from "@/lib/session";
+
+const { user } = await requireSession();
+// Scope private database reads and writes to user.id.
+```
+
+Use `getSession()` for optional authentication or API responses that should return
+401 instead of redirecting. With Cache Components enabled, runtime session reads
+in pages belong inside a Suspense boundary, as shown in `app/dashboard/page.tsx`.
+The Drizzle adapter uses sequential operations because Neon's HTTP driver does
+not support interactive transactions.
+
+See [Better Auth's Next.js integration](https://better-auth.com/docs/integrations/next)
+and [Google setup](https://better-auth.com/docs/authentication/google).
+
+## Tracking
+
+- `/dashboard`: daily diary grouped into breakfast, lunch, dinner, and snacks. Choose a date, search foods, pick a nutrition version, or enter private nutrition manually. Recent foods include your private entries.
+- `/foods`: shared, searchable food bank. A food has a name and optional brand; its nutrition versions are immutable. Contributions append a version rather than changing old information. The bank starts empty.
+- `/weight`: one editable kilogram measurement per date, with history and a chart. Missing measurement days appear as gaps.
+- `/settings`: optional calorie, macro, and weight goals, timezone, and sign-out. Goals apply to all dates. The browser timezone is initialized on the first diary or weight visit.
+
+Nutrition can be entered per 100 g or per named serving. Gram/serving conversion requires a known serving weight. Diary entries keep the original nutrition snapshot and calculate using unrounded values, so later versions cannot change past totals. Publishing a manual entry and logging it use one database transaction. Private data access is authenticated and scoped to the current user; shared food contributions require sign-in.
+
+Apply the generated tracking migration with `pnpm db:migrate` before using these screens. Migration application changes the database configured by `DATABASE_URL`.
+
+## Verification
+
+```bash
+pnpm test                    # Pure nutrition, date, timezone, and validation tests
+pnpm test:db                 # Database smoke checks; requires migrated DATABASE_URL
+pnpm test:app                # Authenticated HTTP smoke checks; requires pnpm dev and the same database
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm build
+```
+
+The database smoke check inserts unique fixtures and removes them within the same atomic batch. It checks snapshot stability, user-scoped query behavior, multiple food versions, duplicate entry protection, and weight upserts. It does not replace browser testing of authentication and Server Actions.
+
+If the package runner prevents Turbopack from starting its local CSS worker, run `node node_modules/next/dist/bin/next build` directly with the same environment.
+
+The local app smoke check creates two temporary accounts and verifies rendered diary/weight isolation, shared food visibility, and anonymous redirects. It cleans its own accounts and fixtures in a `finally` block. Use the same database for the local server and smoke check.
