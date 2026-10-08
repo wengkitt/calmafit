@@ -36,7 +36,12 @@ export function SignOutButton() {
           <AlertDescription>Unable to sign out. Please try again.</AlertDescription>
         </Alert>
       ) : null}
-      <Button variant="outline" className="min-h-11" onClick={signOut} disabled={pending}>
+      <Button
+        variant="outline"
+        className="min-h-11 w-full px-4"
+        onClick={signOut}
+        disabled={pending}
+      >
         {pending ? "Signing out…" : "Sign out"}
       </Button>
     </div>

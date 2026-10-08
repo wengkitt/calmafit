@@ -113,6 +113,24 @@ export function AuthForm({
           disabled={pending !== null}
           onClick={signInWithGoogle}
         >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" data-icon="inline-start">
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.73-.06-1.42-.19-2.09H12v3.96h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.75 3.28-7.95Z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.24 1.06-3.72 1.06-2.87 0-5.3-1.94-6.17-4.55H2.15v2.84A11 11 0 0 0 12 23Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.83 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.15a11 11 0 0 0 0 9.86l3.68-2.84Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.58 10.58 0 0 0 12 1a11 11 0 0 0-9.85 6.07l3.68 2.84C6.7 7.32 9.13 5.38 12 5.38Z"
+            />
+          </svg>
           {pending === "google" ? "Connecting to Google…" : "Continue with Google"}
         </Button>
         <FieldSeparator>Or continue with email</FieldSeparator>

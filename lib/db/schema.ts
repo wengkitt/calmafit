@@ -1,4 +1,17 @@
-import { boolean, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import type { Nutrition, Meal, PortionUnit } from "@/lib/tracking/nutrition";
+import {
+  boolean,
+  check,
+  date,
+  doublePrecision,
+  jsonb,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -76,3 +89,80 @@ export const verification = pgTable(
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
+
+// Shared food records are append-only through the application data layer.
+export const foods = pgTable(
+  "foods",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    brand: text("brand"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("foods_name_idx").on(table.name)],
+);
+
+export const foodVersions = pgTable(
+  "food_versions",
+  {
+    id: text("id").primaryKey(),
+    foodId: text("food_id")
+      .notNull()
+      .references(() => foods.id),
+    nutrition: jsonb("nutrition").$type<Nutrition>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("food_versions_food_idx").on(table.foodId, table.createdAt)],
+);
+
+export const diaryEntries = pgTable(
+  "diary_entries",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    meal: text("meal").$type<Meal>().notNull(),
+    snapshot: jsonb("snapshot").$type<Nutrition>().notNull(),
+    sourceVersionId: text("source_version_id").references(() => foodVersions.id),
+    quantity: doublePrecision("quantity").notNull(),
+    unit: text("unit").$type<PortionUnit>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("diary_user_date_idx").on(table.userId, table.date),
+    index("diary_user_created_idx").on(table.userId, table.createdAt),
+    check("diary_quantity_positive", sql`${table.quantity} > 0 AND ${table.quantity} <= 1000000`),
+    check("diary_meal_valid", sql`${table.meal} IN ('breakfast','lunch','dinner','snacks')`),
+    check("diary_unit_valid", sql`${table.unit} IN ('grams','servings')`),
+  ],
+);
+
+export const weightEntries = pgTable(
+  "weight_entries",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    kilograms: doublePrecision("kilograms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("weight_user_date_idx").on(table.userId, table.date),
+    check("weight_positive", sql`${table.kilograms} > 0 AND ${table.kilograms} <= 1000`),
+  ],
+);
+
+export const userSettings = pgTable("user_settings", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  timezone: text("timezone").notNull(),
+  calories: doublePrecision("calories"),
+  protein: doublePrecision("protein"),
+  carbs: doublePrecision("carbs"),
+  fat: doublePrecision("fat"),
+  targetWeight: doublePrecision("target_weight"),
+});

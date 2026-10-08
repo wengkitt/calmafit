@@ -1,7 +1,7 @@
 # Calma
 
 A mobile-first calorie, macronutrient, and body weight tracking app.
-The current screens provide a simple authentication flow for testing login.
+Track daily meals, calories and macros, contribute to a shared versioned food bank, and record weight and personal goals.
 
 ## Development
 
@@ -15,7 +15,7 @@ pnpm dev
 
 Open [localhost:3000](http://localhost:3000). The home route opens `/dashboard`;
 visitors without a valid session are redirected to `/sign-in`. Use `/sign-up`
-to create an account. The dashboard shows your name and email and a sign-out button.
+to create an account. The dashboard opens your food diary. Food bank, weight history, and settings are available from the mobile bottom navigation or desktop sidebar.
 
 Run `pnpm lint` and `pnpm exec tsc --noEmit` to check the project.
 
@@ -63,7 +63,7 @@ See the [Drizzle Neon guide](https://orm.drizzle.team/docs/get-started/neon-new)
 
 Email/password registration and sign-in are available at `/sign-up` and `/sign-in`.
 Google sign-in uses the same screens. Successful authentication opens `/dashboard`,
-which validates the session on the server and includes sign-out.
+which validates the session on the server. Sign-out is available in Settings.
 
 Before using authentication:
 
@@ -108,3 +108,31 @@ not support interactive transactions.
 
 See [Better Auth's Next.js integration](https://better-auth.com/docs/integrations/next)
 and [Google setup](https://better-auth.com/docs/authentication/google).
+
+## Tracking
+
+- `/dashboard`: daily diary grouped into breakfast, lunch, dinner, and snacks. Choose a date, search foods, pick a nutrition version, or enter private nutrition manually. Recent foods include your private entries.
+- `/foods`: shared, searchable food bank. A food has a name and optional brand; its nutrition versions are immutable. Contributions append a version rather than changing old information. The bank starts empty.
+- `/weight`: one editable kilogram measurement per date, with history and a chart. Missing measurement days appear as gaps.
+- `/settings`: optional calorie, macro, and weight goals, timezone, and sign-out. Goals apply to all dates. The browser timezone is initialized on the first diary or weight visit.
+
+Nutrition can be entered per 100 g or per named serving. Gram/serving conversion requires a known serving weight. Diary entries keep the original nutrition snapshot and calculate using unrounded values, so later versions cannot change past totals. Publishing a manual entry and logging it use one database transaction. Private data access is authenticated and scoped to the current user; shared food contributions require sign-in.
+
+Apply the generated tracking migration with `pnpm db:migrate` before using these screens. Migration application changes the database configured by `DATABASE_URL`.
+
+## Verification
+
+```bash
+pnpm test                    # Pure nutrition, date, timezone, and validation tests
+pnpm test:db                 # Database smoke checks; requires migrated DATABASE_URL
+pnpm test:app                # Authenticated HTTP smoke checks; requires pnpm dev and the same database
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm build
+```
+
+The database smoke check inserts unique fixtures and removes them within the same atomic batch. It checks snapshot stability, user-scoped query behavior, multiple food versions, duplicate entry protection, and weight upserts. It does not replace browser testing of authentication and Server Actions.
+
+If the package runner prevents Turbopack from starting its local CSS worker, run `node node_modules/next/dist/bin/next build` directly with the same environment.
+
+The local app smoke check creates two temporary accounts and verifies rendered diary/weight isolation, shared food visibility, and anonymous redirects. It cleans its own accounts and fixtures in a `finally` block. Use the same database for the local server and smoke check.
