@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project Overview
 
-Calma is a mobile-first calorie, macronutrient, and body weight tracking web application.
+CalmaFit is a mobile-first calorie, macronutrient, and body weight tracking web application.
 
 The application should prioritize simplicity, usability, performance, and maintainability.
 
@@ -33,7 +33,7 @@ The application should prioritize simplicity, usability, performance, and mainta
 - Maintain consistent typography, spacing, border radii, and component styling.
 - Avoid unnecessary gradients, excessive shadows, and decorative elements.
 - If uncertain about a design decision, refer to Linear's website for inspiration.
-- Do not blindly copy Linear's interface. Adapt its design principles to Calma's functionality and mobile-first requirements.
+- Do not blindly copy Linear's interface. Adapt its design principles to CalmaFit's functionality and mobile-first requirements.
 
 ### UI Components
 

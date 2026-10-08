@@ -1,4 +1,4 @@
-# Calma
+# CalmaFit
 
 A mobile-first calorie, macronutrient, and body weight tracking app.
 Track daily meals, calories and macros, contribute to a shared versioned food bank, and record weight and personal goals.
@@ -14,8 +14,7 @@ pnpm dev
 ```
 
 Open [localhost:3000](http://localhost:3000). The home route opens `/dashboard`;
-visitors without a valid session are redirected to `/sign-in`. Use `/sign-up`
-to create an account. The dashboard opens your food diary. Food bank, weight history, and settings are available from the mobile bottom navigation or desktop sidebar.
+visitors without a valid session are redirected to `/sign-in` to continue with Google. The dashboard opens your food diary. Food bank, weight history, and settings are available from the mobile bottom navigation or desktop sidebar.
 
 Run `pnpm lint` and `pnpm exec tsc --noEmit` to check the project.
 
@@ -61,9 +60,11 @@ See the [Drizzle Neon guide](https://orm.drizzle.team/docs/get-started/neon-new)
 
 ## Authentication (Better Auth)
 
-Email/password registration and sign-in are available at `/sign-up` and `/sign-in`.
-Google sign-in uses the same screens. Successful authentication opens `/dashboard`,
-which validates the session on the server. Sign-out is available in Settings.
+Google is the only sign-in method, available at `/sign-in`. First-time Google users
+receive an account automatically. Email/password sign-in and registration are disabled,
+and `/sign-up` redirects to `/sign-in`. Successful authentication opens `/dashboard`,
+which validates the session on the server. Sign-out is available in the desktop sidebar
+and in Settings on mobile.
 
 Before using authentication:
 
@@ -81,14 +82,12 @@ Before using authentication:
    for your production origin. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 6. Restart the development server after changing environment variables.
 
-Google is enabled only when both OAuth credentials are set. Email/password works
-independently. Email verification and password reset delivery are not configured;
-they require an email service. Email registration currently signs users in immediately.
+Google requires both OAuth credentials to be set. Existing user records are preserved.
 
 Server configuration lives in `lib/auth.ts`; `getAuth()` initializes it on first
 use so credentials are not required just to import the route during a build.
 The Next.js handler is mounted at `/api/auth/[...all]`. Client Components can use
-`authClient` from `lib/auth-client.ts` for `signIn`, `signUp`, `signOut`, and `useSession`.
+`authClient` from `lib/auth-client.ts` for Google `signIn.social`, `signOut`, and `useSession`.
 
 Protect each page, Route Handler, or Server Action that accesses private data by
 validating its session on the server. Do not rely only on a layout or cookie presence:

@@ -1,39 +1,66 @@
 // Run against the local development app with the same DATABASE_URL. Creates and cleans its own accounts.
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { loadEnvConfig } from "@next/env";
 import { neon } from "@neondatabase/serverless";
 async function main() {
   loadEnvConfig(process.cwd());
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
+  if (!process.env.BETTER_AUTH_SECRET) throw new Error("BETTER_AUTH_SECRET is required.");
   const base = process.env.TEST_APP_URL ?? "http://localhost:3000";
   if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
     throw new Error("Use a local app for this smoke check.");
   const sql = neon(process.env.DATABASE_URL);
-  const prefix = `calma-app-smoke-${crypto.randomUUID()}`;
+  const prefix = `calmafit-app-smoke-${crypto.randomUUID()}`;
   const accounts: { id: string; cookie: string }[] = [];
   const foodId = `${prefix}-food`,
     versionId = `${prefix}-version`;
   const privateName = `${prefix}-private`,
     sharedName = `${prefix}-shared`;
   try {
-    for (const suffix of ["a", "b"]) {
-      const response = await fetch(`${base}/api/auth/sign-up/email`, {
+    for (const [endpoint, code] of [
+      ["sign-in/email", "EMAIL_PASSWORD_DISABLED"],
+      ["sign-up/email", "EMAIL_PASSWORD_SIGN_UP_DISABLED"],
+    ]) {
+      const response = await fetch(`${base}/api/auth/${endpoint}`, {
         method: "POST",
         headers: { "content-type": "application/json", origin: base },
         body: JSON.stringify({
-          name: "App smoke fixture",
-          email: `${prefix}-${suffix}@example.invalid`,
+          name: "Disabled signup fixture",
+          email: `${prefix}@example.invalid`,
           password: `${crypto.randomUUID()}-Aa1!`,
         }),
       });
-      assert.equal(response.status, 200, "Test account signup failed");
-      const data = await response.json();
+      assert.equal(response.status, 400, `${endpoint} must be disabled`);
+      assert.equal((await response.json()).code, code);
+    }
+    const unexpectedUsers =
+      await sql`SELECT id FROM "user" WHERE email = ${`${prefix}@example.invalid`}`;
+    assert.equal(unexpectedUsers.length, 0, "Disabled registration must not create a user");
+
+    const signIn = await fetch(`${base}/sign-in`);
+    const signInHtml = await signIn.text();
+    assert.ok(signInHtml.includes("Continue with Google"));
+    assert.ok(!signInHtml.includes('type="password"'));
+    assert.ok(!signInHtml.includes('type="email"'));
+    assert.ok(!signInHtml.includes('href="/sign-up"'));
+    const signUp = await fetch(`${base}/sign-up`, { redirect: "manual" });
+    assert.ok(signUp.headers.get("location")?.includes("/sign-in"));
+
+    // Seed isolated sessions directly so application checks never enable password auth.
+    for (const suffix of ["a", "b"]) {
+      const id = `${prefix}-${suffix}`;
+      const token = crypto.randomUUID();
+      const signature = createHmac("sha256", process.env.BETTER_AUTH_SECRET)
+        .update(token)
+        .digest("base64");
+      await sql.transaction([
+        sql`INSERT INTO "user" (id, name, email) VALUES (${id}, 'App smoke fixture', ${`${id}@example.invalid`})`,
+        sql`INSERT INTO "session" (id, user_id, token, expires_at) VALUES (${id}, ${id}, ${token}, NOW() + INTERVAL '1 hour')`,
+      ]);
       accounts.push({
-        id: data.user.id,
-        cookie: response.headers
-          .getSetCookie()
-          .map((v) => v.split(";")[0])
-          .join("; "),
+        id,
+        cookie: `better-auth.session_token=${encodeURIComponent(`${token}.${signature}`)}`,
       });
     }
     const nutrition = {
@@ -89,7 +116,7 @@ async function main() {
     );
     assert.ok(!anonymous.body.includes(privateName));
     console.log(
-      "App smoke checks passed: authenticated diary and weight isolation, shared food access, private food exclusion, anonymous redirect.",
+      "App smoke checks passed: Google-only sign-in UI, disabled email authentication, signup redirect, authenticated diary and weight isolation, shared food access, private food exclusion, anonymous redirect.",
     );
   } finally {
     const ids = accounts.map((a) => a.id);
@@ -101,7 +128,8 @@ async function main() {
       ]);
   }
 }
-main().catch(() => {
+main().catch((error: unknown) => {
+  if (error instanceof assert.AssertionError) console.error(error.message);
   console.error(
     "App smoke check failed. Check the local server, database, and authentication settings.",
   );

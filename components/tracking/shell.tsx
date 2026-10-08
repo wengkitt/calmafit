@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className="mb-8 flex items-center gap-2.5 px-2 text-sm font-semibold tracking-tight"
         >
           <Sprout className="size-5 text-primary" />
-          Calma
+          CalmaFit
         </Link>
         <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">Workspace</p>
         <nav aria-label="Main navigation" className="flex flex-col gap-1">
@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="flex h-14 items-center justify-between border-b px-5 md:h-12 md:px-8">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold md:hidden">
           <Sprout className="size-5 text-primary" />
-          Calma
+          CalmaFit
         </Link>
         <span className="hidden items-center gap-2 text-[13px] text-muted-foreground md:flex">
           Workspace <ChevronRight aria-hidden="true" className="size-3.5" />

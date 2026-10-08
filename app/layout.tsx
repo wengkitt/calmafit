@@ -4,7 +4,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: { default: "Calma", template: "%s | Calma" },
+  title: { default: "CalmaFit", template: "%s | CalmaFit" },
   description: "Simple calorie, macronutrient, and body weight tracking.",
 };
 

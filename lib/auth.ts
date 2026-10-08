@@ -19,7 +19,7 @@ function createAuth() {
   }
 
   return betterAuth({
-    appName: "Calma",
+    appName: "CalmaFit",
     secret,
     baseURL,
     database: drizzleAdapter(getDb(), {
@@ -28,7 +28,7 @@ function createAuth() {
       // Neon's HTTP driver does not support interactive transactions.
       transaction: false,
     }),
-    emailAndPassword: { enabled: true },
+    emailAndPassword: { enabled: false },
     socialProviders: {
       ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
         ? {

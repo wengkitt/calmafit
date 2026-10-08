@@ -10,10 +10,7 @@ async function SignInForm({ searchParams }: PageProps<"/sign-in">) {
   if (session) redirect("/dashboard");
   return (
     <AuthForm
-      mode="sign-in"
-      initialError={
-        params.error ? "Google sign-in wasn't completed. Please try again or use email." : undefined
-      }
+      initialError={params.error ? "Google sign-in wasn't completed. Please try again." : undefined}
     />
   );
 }

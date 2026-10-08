@@ -6,7 +6,7 @@ async function main() {
   loadEnvConfig(process.cwd());
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
   const sql = neon(process.env.DATABASE_URL);
-  const prefix = `calma-smoke-${crypto.randomUUID()}`;
+  const prefix = `calmafit-smoke-${crypto.randomUUID()}`;
   const a = `${prefix}-a`,
     b = `${prefix}-b`,
     foodId = `${prefix}-food`,
