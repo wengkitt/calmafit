@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, LayoutList, Scale, Settings2, Sprout } from "lucide-react";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { BookOpen, ChevronRight, LayoutList, Scale, Settings2, Sprout } from "lucide-react";
+import { SidebarAccount } from "@/components/auth/sidebar-account";
 import { cn } from "@/lib/utils";
 const links = [
   { href: "/dashboard", label: "Diary", icon: LayoutList },
@@ -14,18 +14,16 @@ const links = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   return (
-    <div className="min-h-dvh md:pl-56">
-      <aside className="fixed inset-y-0 left-0 hidden w-56 flex-col border-r bg-sidebar px-4 py-8 md:flex">
+    <div className="min-h-dvh md:pl-60">
+      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar px-3 py-5 md:flex">
         <Link
           href="/dashboard"
-          className="mb-12 flex items-center gap-2 px-3 text-xl font-semibold tracking-tight"
+          className="mb-8 flex items-center gap-2.5 px-2 text-sm font-semibold tracking-tight"
         >
-          <Sprout className="size-6 text-primary" />
+          <Sprout className="size-5 text-primary" />
           Calma
         </Link>
-        <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-          Your workspace
-        </p>
+        <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">Workspace</p>
         <nav aria-label="Main navigation" className="flex flex-col gap-1">
           {links.map(({ href, label, icon: Icon }) => (
             <Link
@@ -33,8 +31,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href={href}
               aria-current={path === href ? "page" : undefined}
               className={cn(
-                "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                path === href && "bg-muted font-medium text-foreground",
+                "flex min-h-9 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                path === href && "bg-sidebar-accent font-medium text-foreground",
               )}
             >
               <Icon className="size-4" />
@@ -43,20 +41,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto pt-6">
-          <SignOutButton />
+          <SidebarAccount />
         </div>
       </aside>
-      <header className="flex h-16 items-center justify-between border-b px-5 md:px-10">
+      <header className="flex h-14 items-center justify-between border-b px-5 md:h-12 md:px-8">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold md:hidden">
           <Sprout className="size-5 text-primary" />
           Calma
         </Link>
-        <span className="hidden text-xs text-muted-foreground md:block">
-          Personal tracking /{" "}
+        <span className="hidden items-center gap-2 text-[13px] text-muted-foreground md:flex">
+          Workspace <ChevronRight aria-hidden="true" className="size-3.5" />
           <span className="text-foreground">{links.find((l) => l.href === path)?.label}</span>
         </span>
       </header>
-      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-5 pt-8 pb-28 md:px-10 md:pt-10 md:pb-12">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 pt-6 pb-28 md:px-8 md:pt-8 md:pb-12">
         {children}
       </main>
       <nav
@@ -69,8 +67,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href={href}
             aria-current={path === href ? "page" : undefined}
             className={cn(
-              "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[11px] text-muted-foreground",
-              path === href && "bg-muted font-medium text-foreground",
+              "flex min-h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] text-muted-foreground",
+              path === href && "bg-sidebar-accent font-medium text-foreground",
             )}
           >
             <Icon className="size-5" />
@@ -94,12 +92,10 @@ export function PageHeading({
 }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="flex flex-col gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          {eyebrow}
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <p className="sr-only">{eyebrow}</p>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-xl">{title}</h1>
+        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
       {action && <div className="ml-auto shrink-0">{action}</div>}
     </div>

@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-export function SignOutButton() {
+export function useSignOut() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
@@ -29,6 +29,11 @@ export function SignOutButton() {
     }
   }
 
+  return { signOut, pending, error };
+}
+
+export function SignOutButton() {
+  const { signOut, pending, error } = useSignOut();
   return (
     <div className="flex w-full flex-col gap-3">
       {error ? (

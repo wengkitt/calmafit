@@ -102,11 +102,11 @@ export function WeightTracker({
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-medium">Your check-ins</h2>
         {entries.length ? (
-          <div className="overflow-hidden rounded-xl border">
+          <div className="overflow-hidden rounded-lg border">
             {entries.map((e) => (
               <button
                 key={e.id}
-                className="flex min-h-16 w-full items-center justify-between gap-4 border-b px-5 py-4 text-left last:border-b-0 hover:bg-muted/50 focus-visible:bg-muted focus-visible:outline-ring"
+                className="flex min-h-16 w-full items-center justify-between gap-4 border-b px-5 py-3 text-left last:border-b-0 hover:bg-muted/50 focus-visible:bg-muted focus-visible:outline-ring"
                 onClick={() => {
                   setDeleting(false);
                   setEditor(e);

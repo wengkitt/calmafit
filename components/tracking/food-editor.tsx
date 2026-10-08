@@ -635,7 +635,7 @@ export function FoodBank({ initialFoods }: { initialFoods: FoodResult[] }) {
           </AlertDescription>
         </Alert>
       ) : results.length ? (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="overflow-hidden rounded-lg border">
           <div className="flex justify-between bg-muted/50 px-5 py-3 text-xs text-muted-foreground">
             <span>Food / brand</span>
             <span>Nutrition versions</span>
@@ -644,7 +644,7 @@ export function FoodBank({ initialFoods }: { initialFoods: FoodResult[] }) {
             <button
               key={f.id}
               onClick={() => setInspecting(f)}
-              className="flex min-h-20 w-full items-center justify-between gap-4 border-t px-5 py-4 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted focus-visible:outline-ring"
+              className="flex min-h-16 w-full items-center justify-between gap-4 border-t px-5 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted focus-visible:outline-ring"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{f.name}</p>

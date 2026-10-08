@@ -31,8 +31,8 @@ export function TrackingSettings({ settings }: { settings: Settings | null }) {
       />
       <div className="w-full">
         <ActionForm action={saveSettings} submitLabel="Save settings">
-          <Card className="shadow-none">
-            <CardHeader>
+          <Card className="gap-5 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-8">
+            <CardHeader className="w-full self-start">
               <CardTitle>Daily nutrition goals</CardTitle>
               <CardDescription>Your targets apply to every day in the diary.</CardDescription>
             </CardHeader>
@@ -56,8 +56,8 @@ export function TrackingSettings({ settings }: { settings: Settings | null }) {
               </FieldGroup>
             </CardContent>
           </Card>
-          <Card className="shadow-none">
-            <CardHeader>
+          <Card className="gap-5 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-8">
+            <CardHeader className="w-full self-start">
               <CardTitle>Weight & daily tracking</CardTitle>
               <CardDescription>
                 Your timezone determines when a new tracking day starts.

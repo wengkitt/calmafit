@@ -100,7 +100,7 @@ export function Diary({
       <PageHeading
         eyebrow="Your daily overview"
         title="Food diary"
-        description="A little awareness goes a long way. Let’s take it one meal at a time."
+        description="Track your meals, calories, and macros."
         action={
           <AddFoodButton
             date={date}
@@ -160,7 +160,7 @@ export function Diary({
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-semibold tracking-tight tabular-nums">
+              <span className="text-3xl font-semibold tracking-tight tabular-nums">
                 {formatNumber(totals.calories)}
               </span>
               <span className="text-sm text-muted-foreground">
@@ -232,7 +232,7 @@ export function Diary({
           );
           return (
             <Card key={meal} className="gap-0 overflow-hidden py-0 shadow-none">
-              <CardHeader className="flex flex-row items-center justify-between gap-3 bg-muted/30 py-4">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 border-b bg-muted/50 py-2.5">
                 <div className="flex items-center gap-3">
                   <Icon className="size-4 text-muted-foreground" />
                   <CardTitle className="text-sm capitalize">{meal}</CardTitle>
@@ -254,7 +254,7 @@ export function Diary({
                       key={e.id}
                       onClick={() => setEditing(e)}
                       aria-label={`Edit ${e.snapshot.name}`}
-                      className="flex min-h-20 w-full items-center justify-between gap-3 border-t px-6 py-4 text-left transition-colors hover:bg-muted/30 focus-visible:bg-muted focus-visible:outline-ring"
+                      className="flex min-h-16 w-full items-center justify-between gap-3 border-t px-5 py-3 text-left transition-colors hover:bg-muted/30 focus-visible:bg-muted focus-visible:outline-ring"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{e.snapshot.name}</p>
