@@ -1,5 +1,45 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Database (Drizzle + Neon PostgreSQL)
+
+The database client uses Drizzle ORM with Neon's HTTP driver. Credentials are
+only needed when querying the database or running commands that connect to it.
+
+1. Copy `.env.example` to `.env.local`.
+2. Set `DATABASE_URL` to the PostgreSQL connection string from your Neon dashboard,
+   including its SSL parameters. Keep `.env.local` out of Git.
+3. Define and export your tables in `lib/db/schema.ts` using `drizzle-orm/pg-core`.
+4. Generate a migration with `pnpm db:generate`, review the SQL in `drizzle/`,
+   then apply it with `pnpm db:migrate`.
+
+No application tables or migrations are included yet. Commit generated migration
+files alongside schema changes. Migration generation works without credentials;
+migration application requires `DATABASE_URL`.
+
+| Command            | Purpose                                                   |
+| ------------------ | --------------------------------------------------------- |
+| `pnpm db:generate` | Generate SQL migrations from schema changes               |
+| `pnpm db:migrate`  | Apply pending migrations to the configured database       |
+| `pnpm db:push`     | Apply schema changes directly for development prototyping |
+| `pnpm db:studio`   | Open Drizzle Studio to browse the configured database     |
+
+Use the client from Server Components, Server Actions, or Route Handlers:
+
+```ts
+import { sql } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+
+const result = await getDb().execute(sql`select 1 as connected`);
+```
+
+The client is marked `server-only` and initialized on first use. Never use a
+`NEXT_PUBLIC_` prefix for database credentials. Drizzle Kit loads `.env*` files
+with `@next/env`, following Next.js environment loading rules.
+
+The HTTP driver suits ordinary queries and batched transactions. Interactive
+transactions requiring a persistent session need Neon's WebSocket driver instead.
+See the [Drizzle Neon guide](https://orm.drizzle.team/docs/get-started/neon-new).
+
 ## Getting Started
 
 First, run the development server:
