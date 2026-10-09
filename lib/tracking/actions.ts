@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import { diaryEntries, foods, foodVersions, userSettings, weightEntries } from "@/lib/db/schema";
 import { requireSession } from "@/lib/session";
-import { readFoods } from "./data";
+import { readFoods, readFoodVersions } from "./data";
 import { portionNutrition, type Nutrition } from "./nutrition";
 import {
   InputError,
@@ -19,7 +19,10 @@ import {
 } from "./validation";
 
 export type ActionResult = { ok: boolean; message: string; errors?: Record<string, string> };
-async function run(work: (userId: string) => Promise<void>): Promise<ActionResult> {
+async function run(
+  paths: string[],
+  work: (userId: string) => Promise<void>,
+): Promise<ActionResult> {
   const { user } = await requireSession();
   try {
     await work(user.id);
@@ -28,7 +31,7 @@ async function run(work: (userId: string) => Promise<void>): Promise<ActionResul
       return { ok: false, message: error.message, errors: { [error.field]: error.message } };
     return { ok: false, message: "Couldn’t save your changes. Please try again." };
   }
-  for (const path of ["/dashboard", "/foods", "/weight", "/settings"]) revalidatePath(path);
+  for (const path of paths) revalidatePath(path);
   return { ok: true, message: "Changes saved." };
 }
 function requestId(data: FormData, userId: string) {
@@ -49,8 +52,11 @@ async function publication(nutrition: Nutrition, foodId: string, id: string) {
 export async function searchFoods(query: string) {
   return readFoods(typeof query === "string" ? query : "");
 }
+export async function loadFoodVersions(foodId: string) {
+  return readFoodVersions(foodId);
+}
 export async function publishFood(data: FormData): Promise<ActionResult> {
-  return run(async (userId) => {
+  return run(["/foods"], async (userId) => {
     const id = requestId(data, userId);
     const [alreadyPublished] = await getDb()
       .select({ id: foodVersions.id })
@@ -78,7 +84,15 @@ export async function publishFood(data: FormData): Promise<ActionResult> {
   });
 }
 export async function saveDiary(data: FormData): Promise<ActionResult> {
-  return run(async (userId) => {
+  const paths = ["/dashboard"];
+  if (
+    !data.get("entryId") &&
+    !data.get("versionId") &&
+    !data.get("recentId") &&
+    data.get("publish") === "on"
+  )
+    paths.push("/foods");
+  return run(paths, async (userId) => {
     const db = getDb();
     const date = dateValue(data),
       meal = mealValue(data),
@@ -163,14 +177,14 @@ export async function saveDiary(data: FormData): Promise<ActionResult> {
   });
 }
 export async function deleteDiary(data: FormData): Promise<ActionResult> {
-  return run(async (userId) => {
+  return run(["/dashboard"], async (userId) => {
     await getDb()
       .delete(diaryEntries)
       .where(and(eq(diaryEntries.id, textValue(data, "entryId")), eq(diaryEntries.userId, userId)));
   });
 }
 export async function saveWeight(data: FormData): Promise<ActionResult> {
-  return run(async (userId) => {
+  return run(["/weight"], async (userId) => {
     const date = dateValue(data),
       kilograms = numberValue(data, "kilograms", true, false, 1000)!;
     await getDb()
@@ -183,14 +197,14 @@ export async function saveWeight(data: FormData): Promise<ActionResult> {
   });
 }
 export async function deleteWeight(data: FormData): Promise<ActionResult> {
-  return run(async (userId) => {
+  return run(["/weight"], async (userId) => {
     await getDb()
       .delete(weightEntries)
       .where(and(eq(weightEntries.userId, userId), eq(weightEntries.date, dateValue(data))));
   });
 }
 export async function saveSettings(data: FormData): Promise<ActionResult> {
-  return run(async (userId) => {
+  return run(["/settings", "/dashboard", "/weight"], async (userId) => {
     const values = {
       userId,
       timezone: timezoneValue(textValue(data, "timezone")),
@@ -207,7 +221,7 @@ export async function saveSettings(data: FormData): Promise<ActionResult> {
   });
 }
 export async function initializeTimezone(timezone: string): Promise<ActionResult> {
-  return run(async (userId) => {
+  return run(["/settings", "/dashboard", "/weight"], async (userId) => {
     timezoneValue(timezone);
     await getDb().insert(userSettings).values({ userId, timezone }).onConflictDoNothing();
   });

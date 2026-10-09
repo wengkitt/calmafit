@@ -5,8 +5,16 @@ import { TrackingSkeleton } from "@/components/tracking/states";
 import { InitializeTimezone } from "@/components/tracking/timezone";
 import { readWeight } from "@/lib/tracking/data";
 export const metadata = { title: "Weight" };
-async function WeightContent() {
-  const data = await readWeight();
+async function WeightContent({
+  searchParams,
+}: {
+  searchParams: PageProps<"/weight">["searchParams"];
+}) {
+  const params = await searchParams;
+  const data = await readWeight({
+    range: typeof params.range === "string" ? params.range : undefined,
+    before: typeof params.before === "string" ? params.before : undefined,
+  });
   return (
     <>
       <InitializeTimezone needed={!data.settings} />
@@ -14,11 +22,11 @@ async function WeightContent() {
     </>
   );
 }
-export default function WeightPage() {
+export default function WeightPage({ searchParams }: PageProps<"/weight">) {
   return (
     <AppShell>
       <Suspense fallback={<TrackingSkeleton />}>
-        <WeightContent />
+        <WeightContent searchParams={searchParams} />
       </Suspense>
     </AppShell>
   );

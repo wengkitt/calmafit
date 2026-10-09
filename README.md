@@ -111,8 +111,8 @@ and [Google setup](https://better-auth.com/docs/authentication/google).
 ## Tracking
 
 - `/dashboard`: daily diary grouped into breakfast, lunch, dinner, and snacks. Choose a date, search foods, pick a nutrition version, or enter private nutrition manually. Recent foods include your private entries.
-- `/foods`: shared, searchable food bank. A food has a name and optional brand; its nutrition versions are immutable. Contributions append a version rather than changing old information. The bank starts empty.
-- `/weight`: one editable kilogram measurement per date, with history and a chart. Missing measurement days appear as gaps.
+- `/foods`: shared, searchable food bank. Search results contain food summaries and version counts; nutrition versions load when a food is selected. Versions are immutable. Contributions append a version rather than changing old information. The bank starts empty.
+- `/weight`: one editable kilogram measurement per date, with 30 check-ins per page and a chart covering the last 30, 90, or 365 days. Older check-ins remain accessible through history navigation. Summary cards always use the latest and first lifetime measurements. Missing measurement days appear as gaps.
 - `/settings`: optional calorie, macro, and weight goals, timezone, and sign-out. Goals apply to all dates. The browser timezone is initialized on the first diary or weight visit.
 
 Nutrition can be entered per 100 g or per named serving. Gram/serving conversion requires a known serving weight. Diary entries keep the original nutrition snapshot and calculate using unrounded values, so later versions cannot change past totals. Publishing a manual entry and logging it use one database transaction. Private data access is authenticated and scoped to the current user; shared food contributions require sign-in.
@@ -125,6 +125,7 @@ Apply the generated tracking migration with `pnpm db:migrate` before using these
 pnpm test                    # Pure nutrition, date, timezone, and validation tests
 pnpm test:db                 # Database smoke checks; requires migrated DATABASE_URL
 pnpm test:app                # Authenticated HTTP smoke checks; requires pnpm dev and the same database
+pnpm test:performance        # Production HTTP timings and payload regressions; defaults to localhost:3100
 pnpm lint
 pnpm exec tsc --noEmit
 pnpm build
@@ -135,3 +136,5 @@ The database smoke check inserts unique fixtures and removes them within the sam
 If the package runner prevents Turbopack from starting its local CSS worker, run `node node_modules/next/dist/bin/next build` directly with the same environment.
 
 The local app smoke check creates two temporary accounts and verifies rendered diary/weight isolation, shared food visibility, and anonymous redirects. It cleans its own accounts and fixtures in a `finally` block. Use the same database for the local server and smoke check.
+
+For the performance check, build the app and run `node node_modules/next/dist/bin/next start -p 3100` in another terminal. The check creates a temporary account with 400 weight measurements and a shared food with 100 nutrition versions, measures three warm responses per route, and verifies bounded history, pagination, lifetime summaries, and summary-only food payloads. Fixtures are removed afterward. Set `TEST_APP_URL` to use another local port. Pass `--measure-only` when collecting a baseline before an optimization. Timings are diagnostic, not pass/fail thresholds; they do not measure browser interaction or Core Web Vitals.
