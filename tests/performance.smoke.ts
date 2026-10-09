@@ -4,7 +4,7 @@ import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { loadEnvConfig } from "@next/env";
 import { neon } from "@neondatabase/serverless";
-import { shiftDate } from "../lib/tracking/nutrition";
+import { dateInTimezone, displayDate, shiftDate } from "../lib/tracking/nutrition";
 
 async function main() {
   loadEnvConfig(process.cwd());
@@ -20,7 +20,7 @@ async function main() {
     .update(token)
     .digest("base64");
   const cookie = `better-auth.session_token=${encodeURIComponent(`${token}.${signature}`)}`;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateInTimezone("UTC");
   const oldest = shiftDate(today, -399);
   const versionMarker = `${id}-nutrition-detail`;
   try {
@@ -129,11 +129,7 @@ async function main() {
       );
       const older = await get(`/weight?before=${shiftDate(today, -29)}&range=30`);
       assert.equal((older.body.match(/aria-label="Edit weight for /g) ?? []).length, 30);
-      assert.ok(
-        !older.body.includes(
-          `aria-label="Edit weight for ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${today}T12:00:00Z`))}`,
-        ),
-      );
+      assert.ok(!older.body.includes(`aria-label="Edit weight for ${displayDate(today)}`));
       const last = await get(`/weight?before=${shiftDate(today, -389)}`);
       assert.equal((last.body.match(/aria-label="Edit weight for /g) ?? []).length, 10);
       assert.ok(last.body.includes(oldest));

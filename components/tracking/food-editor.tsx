@@ -19,6 +19,7 @@ import { EmptyState } from "./states";
 import { searchFoods, loadFoodVersions, saveDiary, publishFood } from "@/lib/tracking/actions";
 import type { DiaryEntry, FoodSummary, FoodVersion } from "@/lib/tracking/data";
 import {
+  displayTimestamp,
   formatNumber,
   meals,
   nutrientKeys,
@@ -154,7 +155,7 @@ function FoodVersions({
           <div className="flex flex-col gap-2">
             <NutritionSummary nutrition={version.nutrition} />
             <p className="text-xs text-muted-foreground">
-              Added {new Date(version.createdAt).toLocaleDateString("en", { timeZone: "UTC" })}
+              Added {displayTimestamp(version.createdAt)}
             </p>
           </div>
         );

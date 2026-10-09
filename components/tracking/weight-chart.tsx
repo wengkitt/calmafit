@@ -1,4 +1,5 @@
 "use client";
+import { milliseconds } from "date-fns/milliseconds";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { EmptyState } from "./states";
@@ -32,16 +33,13 @@ export default function WeightChart({ entries }: { entries: WeightEntry[] }) {
             scale="time"
             domain={
               entries.length === 1
-                ? [points[0].date - 86400000, points[0].date + 86400000]
+                ? [
+                    points[0].date - milliseconds({ days: 1 }),
+                    points[0].date + milliseconds({ days: 1 }),
+                  ]
                 : ["dataMin", "dataMax"]
             }
-            tickFormatter={(v) =>
-              new Date(v).toLocaleDateString("en", {
-                month: "short",
-                day: "numeric",
-                timeZone: "UTC",
-              })
-            }
+            tickFormatter={(v) => chartDateLabel(v, "MMM d")}
             tickLine={false}
             axisLine={false}
             minTickGap={36}
