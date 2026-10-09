@@ -117,6 +117,8 @@ and [Google setup](https://better-auth.com/docs/authentication/google).
 
 Nutrition can be entered per 100 g or per named serving. Gram/serving conversion requires a known serving weight. Diary entries keep the original nutrition snapshot and calculate using unrounded values, so later versions cannot change past totals. Publishing a manual entry and logging it use one database transaction. Private data access is authenticated and scoped to the current user; shared food contributions require sign-in.
 
+The four tracking routes share a persistent layout, keeping desktop and mobile navigation mounted during tab switches. Main navigation links fully prefetch their destination, including authenticated data, in production. Partial Prefetching is disabled so these links can prepare complete screens rather than just their shells. This trades extra background server/database work for faster tab switches; writes still invalidate the affected screens. A first visit or expired prefetch can show a route-specific loading state. Development mode does not prefetch links, so assess navigation with a production build.
+
 Apply the generated tracking migration with `pnpm db:migrate` before using these screens. Migration application changes the database configured by `DATABASE_URL`.
 
 ## Verification

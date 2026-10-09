@@ -1,7 +1,6 @@
 import { Suspense } from "react";
-import { AppShell } from "@/components/tracking/shell";
 import { WeightTracker } from "@/components/tracking/weight";
-import { TrackingSkeleton } from "@/components/tracking/states";
+import Loading from "./loading";
 import { InitializeTimezone } from "@/components/tracking/timezone";
 import { readWeight } from "@/lib/tracking/data";
 export const metadata = { title: "Weight" };
@@ -24,10 +23,8 @@ async function WeightContent({
 }
 export default function WeightPage({ searchParams }: PageProps<"/weight">) {
   return (
-    <AppShell>
-      <Suspense fallback={<TrackingSkeleton />}>
-        <WeightContent searchParams={searchParams} />
-      </Suspense>
-    </AppShell>
+    <Suspense fallback={<Loading />}>
+      <WeightContent searchParams={searchParams} />
+    </Suspense>
   );
 }

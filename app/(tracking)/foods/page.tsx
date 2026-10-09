@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AppShell, PageHeading } from "@/components/tracking/shell";
+import { PageHeading } from "@/components/tracking/shell";
 import { FoodBank } from "@/components/tracking/food-editor";
 import { TrackingSkeleton } from "@/components/tracking/states";
 import { readFoods } from "@/lib/tracking/data";
@@ -9,7 +9,7 @@ async function FoodBankContent() {
 }
 export default function FoodsPage() {
   return (
-    <AppShell>
+    <>
       <PageHeading
         eyebrow="Built together"
         title="Food bank"
@@ -18,6 +18,6 @@ export default function FoodsPage() {
       <Suspense fallback={<TrackingSkeleton />}>
         <FoodBankContent />
       </Suspense>
-    </AppShell>
+    </>
   );
 }

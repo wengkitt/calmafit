@@ -1,7 +1,6 @@
 import { Suspense } from "react";
-import { AppShell } from "@/components/tracking/shell";
 import { TrackingSettings } from "@/components/tracking/settings";
-import { TrackingSkeleton } from "@/components/tracking/states";
+import Loading from "./loading";
 import { readSettings } from "@/lib/tracking/data";
 export const metadata = { title: "Settings" };
 async function SettingsContent() {
@@ -9,10 +8,8 @@ async function SettingsContent() {
 }
 export default function SettingsPage() {
   return (
-    <AppShell>
-      <Suspense fallback={<TrackingSkeleton />}>
-        <SettingsContent />
-      </Suspense>
-    </AppShell>
+    <Suspense fallback={<Loading />}>
+      <SettingsContent />
+    </Suspense>
   );
 }

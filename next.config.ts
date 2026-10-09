@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
     agentFeedback: true,
   },
   cacheComponents: true,
-  partialPrefetching: true,
+  // Four frequently used tabs: prefetch their data as well as their shells.
+  partialPrefetching: false,
   turbopack: {
     rules: {
       "*.css": {
