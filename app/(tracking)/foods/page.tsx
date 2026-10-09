@@ -1,10 +1,13 @@
 import { Suspense } from "react";
+import { cacheLife } from "next/cache";
 import { PageHeading } from "@/components/tracking/shell";
 import { FoodBank } from "@/components/tracking/food-editor";
 import { TrackingSkeleton } from "@/components/tracking/states";
 import { readFoods } from "@/lib/tracking/data";
 export const metadata = { title: "Food bank" };
 async function FoodBankContent() {
+  "use cache: private";
+  cacheLife({ stale: 300 });
   return <FoodBank initialFoods={await readFoods()} />;
 }
 export default function FoodsPage() {

@@ -18,6 +18,7 @@ import { InputField, SelectField, ActionForm } from "./forms";
 import { EmptyState } from "./states";
 import { searchFoods, loadFoodVersions, saveDiary, publishFood } from "@/lib/tracking/actions";
 import type { DiaryEntry, FoodSummary, FoodVersion } from "@/lib/tracking/data";
+import { createSearchCache } from "@/lib/tracking/search-cache";
 import {
   displayTimestamp,
   formatNumber,
@@ -66,6 +67,8 @@ function draftNutrition(d: Draft): Nutrition {
     fat: Number(d.fat),
   };
 }
+const foodSearchCache = createSearchCache(searchFoods);
+
 export function useFoodSearch(query: string, enabled = true) {
   const normalizedQuery = query.trim().slice(0, 200);
   const [state, setState] = useState<{
@@ -75,29 +78,37 @@ export function useFoodSearch(query: string, enabled = true) {
     error: boolean;
   } | null>(null);
   const [retry, setRetry] = useState(0);
+  useEffect(() => foodSearchCache.subscribe(() => setRetry((v) => v + 1)), []);
   useEffect(() => {
     if (!enabled) return;
+    if (foodSearchCache.peek(normalizedQuery) !== undefined) return;
     let live = true;
-    const timer = setTimeout(() => {
-      searchFoods(normalizedQuery)
-        .then((data) => {
-          if (live)
-            setState({ query: normalizedQuery, attempt: retry, results: data, error: false });
-        })
-        .catch(() => {
-          if (live) setState({ query: normalizedQuery, attempt: retry, results: [], error: true });
-        });
-    }, 250);
+    const timer = setTimeout(
+      () => {
+        foodSearchCache
+          .load(normalizedQuery)
+          .then((data) => {
+            if (live)
+              setState({ query: normalizedQuery, attempt: retry, results: data, error: false });
+          })
+          .catch(() => {
+            if (live)
+              setState({ query: normalizedQuery, attempt: retry, results: [], error: true });
+          });
+      },
+      normalizedQuery && !foodSearchCache.peek(normalizedQuery) ? 250 : 0,
+    );
     return () => {
       live = false;
       clearTimeout(timer);
     };
   }, [normalizedQuery, retry, enabled]);
   const current = state?.query === normalizedQuery && state.attempt === retry ? state : null;
+  const cached = foodSearchCache.peek(normalizedQuery);
   return {
-    results: current?.results ?? [],
-    loading: enabled && !current,
-    error: current?.error ?? false,
+    results: cached ?? current?.results ?? [],
+    loading: enabled && !current && cached === undefined,
+    error: cached === undefined && (current?.error ?? false),
     retry: () => setRetry((v) => v + 1),
   };
 }
@@ -545,7 +556,10 @@ export function FoodComposer({
         <ActionForm
           action={bankOnly ? publishFood : saveDiary}
           submitLabel={bankOnly ? "Publish nutrition version" : "Add to diary"}
-          onSuccess={onSuccess}
+          onSuccess={() => {
+            if (bankOnly || (publish && !source)) foodSearchCache.clear();
+            onSuccess();
+          }}
         >
           {date && <input type="hidden" name="date" value={date} />}
           {source ? (

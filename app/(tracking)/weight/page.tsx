@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { cacheLife } from "next/cache";
 import { WeightTracker } from "@/components/tracking/weight";
 import Loading from "./loading";
 import { InitializeTimezone } from "@/components/tracking/timezone";
@@ -9,6 +10,8 @@ async function WeightContent({
 }: {
   searchParams: PageProps<"/weight">["searchParams"];
 }) {
+  "use cache: private";
+  cacheLife({ stale: 300 });
   const params = await searchParams;
   const data = await readWeight({
     range: typeof params.range === "string" ? params.range : undefined,

@@ -117,9 +117,11 @@ and [Google setup](https://better-auth.com/docs/authentication/google).
 
 Nutrition can be entered per 100 g or per named serving. Gram/serving conversion requires a known serving weight. Diary entries keep the original nutrition snapshot and calculate using unrounded values, so later versions cannot change past totals. Publishing a manual entry and logging it use one database transaction. Private data access is authenticated and scoped to the current user; shared food contributions require sign-in.
 
-The four tracking routes share a persistent layout, keeping desktop and mobile navigation mounted during tab switches. Main navigation links fully prefetch their destination, including authenticated data, in production. Partial Prefetching is disabled so these links can prepare complete screens rather than just their shells. This trades extra background server/database work for faster tab switches; writes still invalidate the affected screens. A first visit or expired prefetch can show a route-specific loading state. Development mode does not prefetch links, so assess navigation with a production build.
+The four tracking routes share a persistent layout, keeping desktop and mobile navigation mounted during tab switches. Partial Prefetching prepares session-specific screen content using `use cache: private`, with a five-minute browser cache; private results are not stored in a shared server cache. Main navigation links opt into per-link prefetching so diary dates and weight filters can resolve before navigation. This trades background server/database work for faster tab switches; writes still invalidate the affected screens. Changes from another device may take up to five minutes to appear without a reload. A first visit or expired prefetch can show a route-specific loading state. Assess prefetch behavior with a production build and check development navigation for validation errors.
 
 Apply the generated tracking migration with `pnpm db:migrate` before using these screens. Migration application changes the database configured by `DATABASE_URL`.
+
+Food searches reuse a bounded, five-minute browser-memory cache across dialogs. Reopening Add food reuses fresh results immediately, and concurrent matching searches share one request. Publishing a food or nutrition version clears this cache; logging an existing food does not. Reloading the page clears it, and contributions from other users appear after the cached query expires.
 
 ## Verification
 
