@@ -18,6 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar px-3 py-5 md:flex">
         <Link
           href="/dashboard"
+          prefetch={true}
           className="mb-8 flex items-center gap-2.5 px-2 text-sm font-semibold tracking-tight"
         >
           <Sprout className="size-5 text-primary" />
@@ -29,6 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={href}
               href={href}
+              prefetch={true}
               aria-current={path === href ? "page" : undefined}
               className={cn(
                 "flex min-h-9 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
@@ -45,7 +47,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <header className="flex h-14 items-center justify-between border-b px-5 md:h-12 md:px-8">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold md:hidden">
+        <Link
+          href="/dashboard"
+          prefetch={true}
+          className="flex items-center gap-2 font-semibold md:hidden"
+        >
           <Sprout className="size-5 text-primary" />
           CalmaFit
         </Link>
@@ -65,6 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link
             key={href}
             href={href}
+            prefetch={true}
             aria-current={path === href ? "page" : undefined}
             className={cn(
               "flex min-h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] text-muted-foreground",

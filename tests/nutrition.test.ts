@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   dateInTimezone,
+  displayDate,
+  displayTimestamp,
   formatNumber,
   portionNutrition,
   shiftDate,
@@ -70,7 +72,8 @@ test("rounding is for display only", () => {
   assert.equal(portionNutrition(food, 100, "grams").calories, 123.456);
 });
 test("calendar date validation handles leap years and invalid dates without throwing", () => {
-  for (const value of ["2024-02-29", "2026-10-08"]) assert.equal(validDate(value), true);
+  for (const value of ["2024-02-29", "2026-10-08", "1900-01-01", "9999-12-31"])
+    assert.equal(validDate(value), true);
   for (const value of [
     "2026-02-29",
     "2026-02-30",
@@ -78,17 +81,31 @@ test("calendar date validation handles leap years and invalid dates without thro
     "invalid",
     "2026-1-1",
     "1899-01-01",
+    "1900-02-29",
+    "2026-04-31",
+    "2026-00-01",
+    "2026-01-00",
+    "2026-10-08T00:00:00Z",
+    "10000-01-01",
   ])
     assert.equal(validDate(value), false);
   assert.throws(() => dateValue(form({ date: "2026-02-30" })));
   assert.equal(shiftDate("2024-02-28", 1), "2024-02-29");
   assert.equal(shiftDate("2026-01-01", -1), "2025-12-31");
+  assert.equal(shiftDate("2026-03-08", 1), "2026-03-09");
+  assert.equal(shiftDate("2026-11-01", -1), "2026-10-31");
+  assert.equal(shiftDate("2011-12-29", 1), "2011-12-30");
 });
 test("today follows timezone across midnight and DST boundaries", () => {
   const now = new Date("2026-10-08T17:00:00Z");
   assert.equal(dateInTimezone("Asia/Kuala_Lumpur", now), "2026-10-09");
   assert.equal(dateInTimezone("America/Los_Angeles", now), "2026-10-08");
   assert.equal(dateInTimezone("America/New_York", new Date("2026-03-08T07:30:00Z")), "2026-03-08");
+});
+test("calendar and timestamp labels retain their UTC dates", () => {
+  assert.equal(displayDate("2026-10-08"), "Oct 8, 2026");
+  assert.equal(displayTimestamp("2026-10-08T23:30:00Z"), "10/8/2026");
+  assert.equal(displayTimestamp("2026-10-09T01:30:00+08:00"), "10/8/2026");
 });
 test("nutrition validation allows zero and rejects negative/nonfinite/blank values", () => {
   const values = {
@@ -129,7 +146,9 @@ test("weight chart inserts gaps without expanding long measurement-free periods"
     points.map((p) => p.kilograms),
     [75, 74, null, 73],
   );
-  assert.equal(chartDateLabel(Date.parse("2026-10-08")), "Oct 8, 2026");
-  for (const invalid of [undefined, null, NaN, Infinity, "Weight (kg)"])
+  assert.equal(chartDateLabel(1791417600000), "Oct 8, 2026");
+  assert.equal(points[0].date, 1790985600000);
+  assert.equal(chartDateLabel(1791417600000, "MMM d"), "Oct 8");
+  for (const invalid of [undefined, null, NaN, Infinity, 1e20, "Weight (kg)"])
     assert.equal(chartDateLabel(invalid), "Weight");
 });

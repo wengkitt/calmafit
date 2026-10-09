@@ -1,3 +1,13 @@
+import { utc } from "@date-fns/utc";
+import { tz } from "@date-fns/tz/tz";
+import { addDays } from "date-fns/addDays";
+import { format } from "date-fns/format";
+import { isValid } from "date-fns/isValid";
+import { parseISO } from "date-fns/parseISO";
+
+// Stored calendar dates must not depend on the server or browser timezone.
+const utcOptions = { in: utc };
+
 export const meals = ["breakfast", "lunch", "dinner", "snacks"] as const;
 export type Meal = (typeof meals)[number];
 export type PortionUnit = "grams" | "servings";
@@ -38,30 +48,20 @@ export function validDate(value: string): boolean {
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
     value >= "1900-01-01" &&
     value <= "9999-12-31" &&
-    Number.isFinite(Date.parse(`${value}T00:00:00Z`)) &&
-    new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value
+    isValid(parseISO(value, utcOptions))
   );
 }
 export function dateInTimezone(timezone: string, now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+  return format(now, "yyyy-MM-dd", { in: tz(timezone) });
 }
 export function shiftDate(date: string, days: number): string {
-  const d = new Date(`${date}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  return format(addDays(parseISO(date, utcOptions), days, utcOptions), "yyyy-MM-dd", utcOptions);
 }
 export function displayDate(date: string): string {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T12:00:00Z`));
+  return format(parseISO(date, utcOptions), "MMM d, yyyy", utcOptions);
+}
+export function displayTimestamp(value: Date | string): string {
+  return format(typeof value === "string" ? parseISO(value) : value, "M/d/yyyy", utcOptions);
 }
 export function formatNumber(n: number): string {
   return new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(n);

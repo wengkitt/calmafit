@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -13,11 +15,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
-import { ActionForm, InputField } from "./forms";
+import { ActionForm, InputField, SelectField } from "./forms";
 import { EmptyState } from "./states";
 import { PageHeading } from "./shell";
 import { deleteWeight, saveWeight } from "@/lib/tracking/actions";
-import type { Settings, WeightEntry } from "@/lib/tracking/data";
+import type { readWeight } from "@/lib/tracking/data";
 import { displayDate, formatNumber } from "@/lib/tracking/nutrition";
 
 const WeightChart = dynamic(() => import("./weight-chart"), {
@@ -25,19 +27,26 @@ const WeightChart = dynamic(() => import("./weight-chart"), {
 });
 export function WeightTracker({
   entries,
+  chartEntries,
   settings,
   today,
-}: {
-  entries: WeightEntry[];
-  settings: Settings | null;
-  today: string;
-}) {
+  latest,
+  first,
+  range,
+  before,
+  nextBefore,
+}: Awaited<ReturnType<typeof readWeight>>) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [editor, setEditor] = useState<{ date: string; kilograms?: number } | null>(null),
     [deleting, setDeleting] = useState(false),
     [message, setMessage] = useState("");
-  const latest = entries[0],
-    first = entries.at(-1),
-    change = latest && first ? latest.kilograms - first.kilograms : null;
+  const change = latest && first ? latest.kilograms - first.kilograms : null;
+  const historyHref = (cursor?: string | null) => {
+    const params = new URLSearchParams({ range: String(range) });
+    if (cursor) params.set("before", cursor);
+    return `/weight?${params}`;
+  };
   return (
     <>
       <PageHeading
@@ -94,9 +103,31 @@ export function WeightTracker({
       <Card className="shadow-none">
         <CardHeader>
           <CardTitle className="text-sm">Weight over time</CardTitle>
+          <FieldGroup className="max-w-48">
+            <SelectField
+              label="Chart range"
+              name="range"
+              value={String(range)}
+              disabled={pending}
+              onChange={(event) => {
+                const params = new URLSearchParams({ range: event.target.value });
+                if (before) params.set("before", before);
+                startTransition(() => router.replace(`/weight?${params}`, { scroll: false }));
+              }}
+            >
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="365">Last year</option>
+            </SelectField>
+          </FieldGroup>
+          {pending && (
+            <p role="status" className="text-xs text-muted-foreground">
+              Updating chart…
+            </p>
+          )}
         </CardHeader>
         <CardContent>
-          <WeightChart entries={entries} />
+          <WeightChart entries={chartEntries} />
         </CardContent>
       </Card>
       <section className="flex flex-col gap-4">
@@ -123,9 +154,35 @@ export function WeightTracker({
           </div>
         ) : (
           <EmptyState
-            title="No check-ins yet"
-            description="You can log today’s weight or add a measurement from a previous date."
+            title={before ? "No older check-ins" : "No check-ins yet"}
+            description={
+              before
+                ? "Return to your latest check-ins to view recent measurements."
+                : "You can log today’s weight or add a measurement from a previous date."
+            }
           />
+        )}
+        {(before || nextBefore) && (
+          <nav aria-label="Check-in history" className="flex flex-wrap gap-3">
+            {before && (
+              <Link
+                href={historyHref()}
+                scroll={false}
+                className={buttonVariants({ variant: "outline", size: "lg" })}
+              >
+                Latest check-ins
+              </Link>
+            )}
+            {nextBefore && (
+              <Link
+                href={historyHref(nextBefore)}
+                scroll={false}
+                className={buttonVariants({ variant: "outline", size: "lg" })}
+              >
+                Older check-ins
+              </Link>
+            )}
+          </nav>
         )}
       </section>
       <Dialog

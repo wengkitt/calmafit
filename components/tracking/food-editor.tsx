@@ -16,9 +16,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InputField, SelectField, ActionForm } from "./forms";
 import { EmptyState } from "./states";
-import { searchFoods, saveDiary, publishFood } from "@/lib/tracking/actions";
-import type { DiaryEntry, FoodResult } from "@/lib/tracking/data";
+import { searchFoods, loadFoodVersions, saveDiary, publishFood } from "@/lib/tracking/actions";
+import type { DiaryEntry, FoodSummary, FoodVersion } from "@/lib/tracking/data";
+import { createSearchCache } from "@/lib/tracking/search-cache";
 import {
+  displayTimestamp,
   formatNumber,
   meals,
   nutrientKeys,
@@ -65,33 +67,126 @@ function draftNutrition(d: Draft): Nutrition {
     fat: Number(d.fat),
   };
 }
-export function useFoodSearch(query: string) {
-  const [results, setResults] = useState<FoodResult[]>([]),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState(false),
-    [retry, setRetry] = useState(0);
+const foodSearchCache = createSearchCache(searchFoods);
+
+export function useFoodSearch(query: string, enabled = true) {
+  const normalizedQuery = query.trim().slice(0, 200);
+  const [state, setState] = useState<{
+    query: string;
+    attempt: number;
+    results: FoodSummary[];
+    error: boolean;
+  } | null>(null);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => foodSearchCache.subscribe(() => setRetry((v) => v + 1)), []);
   useEffect(() => {
+    if (!enabled) return;
+    if (foodSearchCache.peek(normalizedQuery) !== undefined) return;
     let live = true;
-    const timer = setTimeout(() => {
-      setLoading(true);
-      setError(false);
-      searchFoods(query)
-        .then((data) => {
-          if (live) setResults(data);
-        })
-        .catch(() => {
-          if (live) setError(true);
-        })
-        .finally(() => {
-          if (live) setLoading(false);
-        });
-    }, 250);
+    const timer = setTimeout(
+      () => {
+        foodSearchCache
+          .load(normalizedQuery)
+          .then((data) => {
+            if (live)
+              setState({ query: normalizedQuery, attempt: retry, results: data, error: false });
+          })
+          .catch(() => {
+            if (live)
+              setState({ query: normalizedQuery, attempt: retry, results: [], error: true });
+          });
+      },
+      normalizedQuery && !foodSearchCache.peek(normalizedQuery) ? 250 : 0,
+    );
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [query, retry]);
-  return { results, loading, error, retry: () => setRetry((v) => v + 1) };
+  }, [normalizedQuery, retry, enabled]);
+  const current = state?.query === normalizedQuery && state.attempt === retry ? state : null;
+  const cached = foodSearchCache.peek(normalizedQuery);
+  return {
+    results: cached ?? current?.results ?? [],
+    loading: enabled && !current && cached === undefined,
+    error: cached === undefined && (current?.error ?? false),
+    retry: () => setRetry((v) => v + 1),
+  };
+}
+function FoodVersions({
+  foodId,
+  onSelect,
+}: {
+  foodId: string;
+  onSelect?: (version: FoodVersion) => void;
+}) {
+  const [retry, setRetry] = useState(0);
+  const [state, setState] = useState<{
+    foodId: string;
+    attempt: number;
+    versions: FoodVersion[];
+    error: boolean;
+  } | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadFoodVersions(foodId)
+      .then((versions) => {
+        if (live) setState({ foodId, attempt: retry, versions, error: false });
+      })
+      .catch(() => {
+        if (live) setState({ foodId, attempt: retry, versions: [], error: true });
+      });
+    return () => {
+      live = false;
+    };
+  }, [foodId, retry]);
+  if (!state || state.foodId !== foodId || state.attempt !== retry)
+    return <Skeleton className="h-24 w-full" aria-label="Loading nutrition versions" />;
+  if (state.error)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Couldn’t load nutrition versions.{" "}
+          <Button type="button" variant="link" onClick={() => setRetry((v) => v + 1)}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  if (!state.versions.length)
+    return (
+      <EmptyState
+        title="No nutrition versions yet"
+        description="Contribute a version to get started."
+      />
+    );
+  return (
+    <div className="flex flex-col gap-3">
+      {state.versions.map((version) => {
+        const content = (
+          <div className="flex flex-col gap-2">
+            <NutritionSummary nutrition={version.nutrition} />
+            <p className="text-xs text-muted-foreground">
+              Added {displayTimestamp(version.createdAt)}
+            </p>
+          </div>
+        );
+        return onSelect ? (
+          <Button
+            key={version.id}
+            variant="outline"
+            className="h-auto justify-start py-3 text-left whitespace-normal"
+            onClick={() => onSelect(version)}
+          >
+            {content}
+          </Button>
+        ) : (
+          <div key={version.id} className="rounded-lg border p-4">
+            {content}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 export function NutritionSummary({ nutrition }: { nutrition: Nutrition }) {
   return (
@@ -205,7 +300,7 @@ function PublicationMatch({
   choice: string;
   setChoice: (id: string) => void;
 }) {
-  const { results, loading, error, retry } = useFoodSearch(name);
+  const { results, loading, error, retry } = useFoodSearch(name, !!name.trim());
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs leading-relaxed text-muted-foreground">
@@ -328,11 +423,11 @@ export function FoodComposer({
   recent?: DiaryEntry[];
   onSuccess: () => void;
   bankOnly?: boolean;
-  food?: FoodResult;
+  food?: FoodSummary;
 }) {
   const [mode, setMode] = useState(bankOnly ? "manual" : "search"),
     [query, setQuery] = useState("");
-  const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null);
+  const [selectedFood, setSelectedFood] = useState<FoodSummary | null>(null);
   const [source, setSource] = useState<{
     nutrition: Nutrition;
     versionId?: string;
@@ -347,7 +442,7 @@ export function FoodComposer({
     [choice, setChoice] = useState(food?.id ?? "");
   const [quantity, setQuantity] = useState("100"),
     [unit, setUnit] = useState<PortionUnit>("grams");
-  const search = useFoodSearch(query);
+  const search = useFoodSearch(query, mode === "search" && !source && !selectedFood);
   const nutrition = source?.nutrition ?? draftNutrition(draft);
   function pick(n: Nutrition, ids: { versionId?: string; recentId?: string }) {
     setSource({ nutrition: n, ...ids });
@@ -383,7 +478,7 @@ export function FoodComposer({
             }}
             placeholder="Search the shared food bank…"
           />
-          {search.loading ? (
+          {search.loading && !selectedFood ? (
             <Skeleton className="h-24 w-full" />
           ) : search.error ? (
             <Alert variant="destructive">
@@ -400,21 +495,11 @@ export function FoodComposer({
               <p className="text-xs text-muted-foreground">
                 Choose the nutrition version you want to log.
               </p>
-              {selectedFood.versions.map((v) => (
-                <Button
-                  key={v.id}
-                  variant="outline"
-                  className="h-auto justify-start py-3 text-left whitespace-normal"
-                  onClick={() => pick(v.nutrition, { versionId: v.id })}
-                >
-                  <div className="flex flex-col gap-2">
-                    <NutritionSummary nutrition={v.nutrition} />
-                    <span className="text-xs text-muted-foreground">
-                      Added {new Date(v.createdAt).toLocaleDateString("en", { timeZone: "UTC" })}
-                    </span>
-                  </div>
-                </Button>
-              ))}
+              <FoodVersions
+                key={selectedFood.id}
+                foodId={selectedFood.id}
+                onSelect={(v) => pick(v.nutrition, { versionId: v.id })}
+              />
             </div>
           ) : search.results.length ? (
             <div className="flex flex-col gap-2">
@@ -431,9 +516,7 @@ export function FoodComposer({
                       {f.brand || "Unbranded"}
                     </span>
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {f.versions.length} versions →
-                  </span>
+                  <span className="text-xs text-muted-foreground">{f.versionCount} versions →</span>
                 </Button>
               ))}
             </div>
@@ -473,7 +556,10 @@ export function FoodComposer({
         <ActionForm
           action={bankOnly ? publishFood : saveDiary}
           submitLabel={bankOnly ? "Publish nutrition version" : "Add to diary"}
-          onSuccess={onSuccess}
+          onSuccess={() => {
+            if (bankOnly || (publish && !source)) foodSearchCache.clear();
+            onSuccess();
+          }}
         >
           {date && <input type="hidden" name="date" value={date} />}
           {source ? (
@@ -597,13 +683,14 @@ export function AddFoodButton({
     </Dialog>
   );
 }
-export function FoodBank({ initialFoods }: { initialFoods: FoodResult[] }) {
+export function FoodBank({ initialFoods }: { initialFoods: FoodSummary[] }) {
   const [query, setQuery] = useState(""),
-    [inspecting, setInspecting] = useState<FoodResult | null>(null);
-  const [editor, setEditor] = useState<{ food?: FoodResult } | null>(null),
+    [inspecting, setInspecting] = useState<FoodSummary | null>(null);
+  const [editor, setEditor] = useState<{ food?: FoodSummary } | null>(null),
     [message, setMessage] = useState("");
-  const search = useFoodSearch(query);
-  const results = query ? search.results : initialFoods;
+  const hasQuery = !!query.trim();
+  const search = useFoodSearch(query, hasQuery);
+  const results = hasQuery ? search.results : initialFoods;
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end gap-3">
@@ -626,9 +713,9 @@ export function FoodBank({ initialFoods }: { initialFoods: FoodResult[] }) {
           {message}
         </p>
       )}
-      {query && search.loading ? (
+      {hasQuery && search.loading ? (
         <Skeleton className="h-40 w-full" />
-      ) : query && search.error ? (
+      ) : hasQuery && search.error ? (
         <Alert variant="destructive">
           <AlertDescription>
             Couldn’t search the food bank. <Button onClick={search.retry}>Retry</Button>
@@ -650,7 +737,7 @@ export function FoodBank({ initialFoods }: { initialFoods: FoodResult[] }) {
                 <p className="truncate text-sm font-medium">{f.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{f.brand || "Unbranded"}</p>
               </div>
-              <span className="shrink-0 text-sm text-muted-foreground">{f.versions.length} →</span>
+              <span className="shrink-0 text-sm text-muted-foreground">{f.versionCount} →</span>
             </button>
           ))}
         </div>
@@ -681,16 +768,7 @@ export function FoodBank({ initialFoods }: { initialFoods: FoodResult[] }) {
               {inspecting?.brand || "Unbranded"} · Community-contributed nutrition
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            {inspecting?.versions.map((v) => (
-              <div key={v.id} className="flex flex-col gap-2 rounded-lg border p-4">
-                <NutritionSummary nutrition={v.nutrition} />
-                <p className="text-xs text-muted-foreground">
-                  Added {new Date(v.createdAt).toLocaleDateString("en", { timeZone: "UTC" })}
-                </p>
-              </div>
-            ))}
-          </div>
+          {inspecting && <FoodVersions key={inspecting.id} foodId={inspecting.id} />}
           <Button
             onClick={() => {
               if (inspecting) setEditor({ food: inspecting });

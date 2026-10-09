@@ -1,16 +1,16 @@
 "use client";
+import { milliseconds } from "date-fns/milliseconds";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { EmptyState } from "./states";
 import type { WeightEntry } from "@/lib/tracking/data";
 import { chartDateLabel, weightPoints } from "@/lib/tracking/chart";
 export default function WeightChart({ entries }: { entries: WeightEntry[] }) {
-  const rows = [...entries].reverse();
-  if (!rows.length)
+  if (!entries.length)
     return (
       <EmptyState
-        title="Your journey starts with one entry"
-        description="Log your weight to see how it changes over time."
+        title="No measurements in this range"
+        description="Choose a wider range or log your weight to see your trend."
       />
     );
   const points = weightPoints(entries);
@@ -32,17 +32,14 @@ export default function WeightChart({ entries }: { entries: WeightEntry[] }) {
             type="number"
             scale="time"
             domain={
-              rows.length === 1
-                ? [points[0].date - 86400000, points[0].date + 86400000]
+              entries.length === 1
+                ? [
+                    points[0].date - milliseconds({ days: 1 }),
+                    points[0].date + milliseconds({ days: 1 }),
+                  ]
                 : ["dataMin", "dataMax"]
             }
-            tickFormatter={(v) =>
-              new Date(v).toLocaleDateString("en", {
-                month: "short",
-                day: "numeric",
-                timeZone: "UTC",
-              })
-            }
+            tickFormatter={(v) => chartDateLabel(v, "MMM d")}
             tickLine={false}
             axisLine={false}
             minTickGap={36}

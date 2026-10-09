@@ -1,11 +1,13 @@
 import { Suspense } from "react";
-import { AppShell } from "@/components/tracking/shell";
+import { cacheLife } from "next/cache";
 import { Diary } from "@/components/tracking/diary";
-import { TrackingSkeleton } from "@/components/tracking/states";
+import Loading from "./loading";
 import { InitializeTimezone } from "@/components/tracking/timezone";
 import { readDiary } from "@/lib/tracking/data";
 export const metadata = { title: "Food diary" };
 async function DiaryContent({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  "use cache: private";
+  cacheLife({ stale: 300 });
   const { date } = await searchParams;
   const data = await readDiary(date);
   return (
@@ -17,10 +19,8 @@ async function DiaryContent({ searchParams }: { searchParams: Promise<{ date?: s
 }
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
-    <AppShell>
-      <Suspense fallback={<TrackingSkeleton />}>
-        <DiaryContent searchParams={searchParams} />
-      </Suspense>
-    </AppShell>
+    <Suspense fallback={<Loading />}>
+      <DiaryContent searchParams={searchParams} />
+    </Suspense>
   );
 }
